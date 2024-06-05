@@ -1,6 +1,8 @@
 #include "lisp.h"
 #include <string.h>
 
+#output "eval.nw"
+
 Atom env_create(Atom parent)
 {
 	return cons(parent, nil);
@@ -399,4 +401,3 @@ int eval_expr(Atom expr, Atom env, Atom *result)
 
 	return err;
 }
-

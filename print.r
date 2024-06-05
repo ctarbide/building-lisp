@@ -1,5 +1,6 @@
 #include "lisp.h"
-#include <stdio.h>
+
+#output "print.nw"
 
 void print_expr(Atom atom)
 {
@@ -31,14 +32,13 @@ void print_expr(Atom atom)
 		printf("%ld", atom.value.integer);
 		break;
 	case AtomType_Builtin:
-		printf("#<BUILTIN:%p>", atom.value.builtin);
+		printf("#<BUILTIN:%p>", (void*)atom.value.pair);
 		break;
 	case AtomType_Closure:
-		printf("#<CLOSURE:%p>", atom.value.pair);
+		printf("#<CLOSURE:%p>", (void*)atom.value.pair);
 		break;
 	case AtomType_Macro:
-		printf("#<MACRO:%p>", atom.value.pair);
+		printf("#<MACRO:%p>", (void*)atom.value.pair);
 		break;
 	}
 }
-

@@ -1,14 +1,8 @@
 #include "lisp.h"
-#include <stdarg.h>
+#include "rttdef.h"
 #include <stddef.h>
-#include <stdlib.h>
-#include <string.h>
 
-struct Allocation {
-	struct Pair pair;
-	int mark : 1;
-	struct Allocation *next;
-};
+#output "data.nw"
 
 struct Allocation *global_allocations = NULL;
 
@@ -98,17 +92,15 @@ Atom copy_list(Atom list)
 	return a;
 }
 
-Atom list_create(int n, ...)
+Atom list_create(int n, Atom *argv)
 {
-	va_list ap;
+	int i = 0;
 	Atom list = nil;
 
-	va_start(ap, n);
 	while (n--) {
-		Atom item = va_arg(ap, Atom);
+		Atom item = argv[i++];
 		list = cons(item, list);
 	}
-	va_end(ap);
 
 	list_reverse(&list);
 	return list;
@@ -149,9 +141,9 @@ void gc_mark(Atom root)
 		|| root.type == AtomType_Macro))
 		return;
 
-	a = (struct Allocation *)
+	a = (void *)
 		((char *) root.value.pair
-			- offsetof(struct Allocation, pair));
+			- passthru(offsetof(struct Allocation, pair)));
 
 	if (a->mark)
 		return;
@@ -187,4 +179,3 @@ void gc()
 		a = a->next;
 	}
 }
-

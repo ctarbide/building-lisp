@@ -1,0 +1,12 @@
+*~
+*.o
+*.stamp
+/rttdef.h
+/builtin.nw
+/data.nw
+/eval.nw
+/main.nw
+/print.nw
+/read.nw
+/lisp.c
+/lisp

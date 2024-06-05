@@ -1,0 +1,204 @@
+
+<<Variables local to [[main]]>>=
+Atom env;
+@
+
+<<Local variables initialization>>=
+env = env_create(nil);
+@
+
+Set up the initial environment
+
+<<Local variables initialization>>=
+env_define(env, make_sym("CAR"), make_builtin(builtin_car));
+env_define(env, make_sym("CDR"), make_builtin(builtin_cdr));
+env_define(env, make_sym("CONS"), make_builtin(builtin_cons));
+env_define(env, make_sym("+"), make_builtin(builtin_add));
+env_define(env, make_sym("-"), make_builtin(builtin_subtract));
+env_define(env, make_sym("*"), make_builtin(builtin_multiply));
+env_define(env, make_sym("/"), make_builtin(builtin_divide));
+env_define(env, make_sym("T"), make_sym("T"));
+env_define(env, make_sym("="), make_builtin(builtin_numeq));
+env_define(env, make_sym("<"), make_builtin(builtin_less));
+env_define(env, make_sym("EQ?"), make_builtin(builtin_eq));
+env_define(env, make_sym("PAIR?"), make_builtin(builtin_pairp));
+env_define(env, make_sym("PROCEDURE?"), make_builtin(builtin_procp));
+@
+
+Load a basic lisp library
+
+<<Local variables initialization>>=
+load_file(env, "library.lisp");
+@
+
+<<Process Line - vars>>=
+const char *p = line_start;
+Error err = Error_OK;
+Atom expr, result;
+@
+
+<<Read, Eval and Print>>=
+while (err == Error_OK && strlen(p)) {
+    err = read_expr(p, &p, &expr);
+    if (err == Error_OK)
+        err = eval_expr(expr, env, &result);
+    <<Print>>
+}
+@
+
+<<Print>>=
+switch (err) {
+    case Error_OK:
+        print_expr(result);
+        putchar('\n');
+        break;
+    case Error_Syntax:
+        puts("Syntax error");
+        break;
+    case Error_Unbound:
+        puts("Symbol not bound");
+        break;
+    case Error_Args:
+        puts("Wrong number of arguments");
+        break;
+    case Error_Type:
+        puts("Wrong type");
+        break;
+    case Error_Exhaustion:
+        puts("Exhaustion");
+        break;
+}
+@
+
+<<Process Line - vars>>=
+size_t line_length = ptr - line_start;
+@
+
+<<Process Line>>=
+<<Process Line - vars>>
+line_start[--line_length] = '\0'; /* LF -> '\0' */
+<<Read, Eval and Print>>
+@
+
+<<The main program>>=
+int
+main(int argc, char **argv)
+{
+    <<Variables local to [[main]]>>
+    <<Local variables initialization>>
+    <<Set up option selection>>
+    <<Process all the files>>
+    <<Exit status>>
+    return 0;
+}
+@
+
+<<lisp.c>>=
+<<C Standards>>
+<<Includes>>
+<<Definitions>>
+<<Global variables>>
+<<typedef Error>>
+<<struct tag Atom>>
+<<typedef Builtin>>
+<<struct Atom>>
+<<typedef Atom>>
+<<struct Pair>>
+<<struct Allocation>>
+<<protos>>
+<<globals>>
+<<impl>>
+<<The main program>>
+@
+
+<<C Standards>>=
+#ifndef _BSD_SOURCE
+#define _BSD_SOURCE
+#endif
+#ifndef _ISOC99_SOURCE
+#define _ISOC99_SOURCE
+#endif
+#ifndef _XOPEN_SOURCE
+#define _XOPEN_SOURCE 600
+#endif
+#ifndef _POSIX_C_SOURCE
+#define _POSIX_C_SOURCE 200112L
+#endif
+@
+
+<<Includes>>=
+#include <stdlib.h>
+#include <stdio.h>
+#include <stdint.h>
+#include <inttypes.h>
+#include <string.h>
+#include <math.h>
+#include <ctype.h>
+#include <limits.h>
+#include <stdarg.h>
+#include <stddef.h>
+#include <fcntl.h>
+#include <unistd.h>
+@
+
+<<targets>>=
+set -- "$@" lisp.c
+set -- "$@" lisp
+@
+
+run ./build.sh everytime you change 'lisp.c deps' below
+
+<<lisp.c deps>>=
+<<Makefile prefix>>.nw builtin.nw data.nw eval.nw lisp.nw
+main.nw print.nw read.nw repl.nw
+@
+
+<<lisp deps>>=
+<<lisp.c deps>> lisp.c
+@
+
+<<function list_set_deps - lisp.c>>=
+list_set_deps(){
+    cat<<'EOF' | cmd_push_to_argv
+<<lisp.c deps>>
+EOF
+}
+@
+
+<<build lisp.c>>=
+<<function cmd_push_to_argv>>
+<<function list_set_deps - lisp.c>>
+eval "set --; `list_set_deps`"
+CHMOD='chmod 0444' nofake.sh --error -L -R'lisp.c' -o'lisp.c' "$@"
+@
+
+<<set build PEDANTIC>>=
+set -- "$@" -ansi -pedantic
+set -- "$@" -Wall -Wextra -Wdeclaration-after-statement
+set -- "$@" -Wstrict-prototypes -Wmissing-prototypes
+set -- "$@" -Wredundant-decls
+set -- "$@" -Wshadow
+set -- "$@" -Wpointer-arith
+set -- "$@" -Wno-unused-parameter
+set -- "$@" -Werror -fmax-errors=3
+@
+
+<<build lisp - STANDARD>>=
+gcc -Wall -O2 -olisp lisp.c
+@
+
+<<build lisp - DEBUG>>=
+gcc -Wall -O0 -g -olisp lisp.c
+@
+
+<<build lisp - PEDANTIC>>=
+set -- -O2
+<<set build PEDANTIC>>
+gcc "$@" -olisp lisp.c
+@
+
+<<build lisp>>=
+#@<<build lisp - STANDARD>>
+#@<<build lisp - DEBUG>>
+<<build lisp - PEDANTIC>>
+@

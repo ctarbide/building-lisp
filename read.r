@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#output "read.nw"
+
 int lex(const char *str, const char **start, const char **end)
 {
 	const char *ws = " \t\n";
@@ -145,4 +147,3 @@ int read_expr(const char *input, const char **end, Atom *result)
 		return parse_simple(token, *end, result);
 	}
 }
-

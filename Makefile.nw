@@ -1,0 +1,171 @@
+
+Limit the responsibilities of Makefile and delegate the heavy work back to
+sh/nofake as soon as possible.
+
+To generate/update Makefile, simply do:
+
+    nofake Makefile.nw | sh
+
+<<Makefile prefix>>=
+Makefile
+@
+
+<<sources>>=
+<<Makefile prefix>>.nw lisp.nw
+@
+
+<<*>>=
+#!/bin/sh
+set -eu
+SH=${SH:-sh -eu}; export SH
+<<function cmd_push_to_argv>>
+<<function list_set_sources>>
+set -- <<Makefile prefix>>.nw
+nofake --error -R'generate build.sh' "$@" | ${SH}
+eval "set --; `list_set_sources`"
+nofake --error -R'generate Makefile' "$@" | ${SH} ><<Makefile prefix>>
+@
+
+<<function cmd_push_to_argv>>=
+cmd_push_to_argv(){
+    normalize-args.sh | perl -lpe'$_=qq{set -- \042\$\@\042 ${_};}' |
+        LC_ALL=C sort -u
+}
+@
+
+<<function list_set_sources>>=
+list_set_sources(){
+    cat<<'EOF' | cmd_push_to_argv
+<<sources>>
+EOF
+}
+@
+
+<<function indent_args>>=
+indent_args(){
+    perl -le'
+        sub backslash(){ scalar(@ARGV) ? q{ \\} : q{} }
+        while (my @a = splice(@ARGV, 0, 5)) {
+            print(q{    }, join(q{ }, @a), backslash);
+        }' -- "$@"
+}
+@
+
+<<indent "$@">>=
+indent_args "$@"
+@
+
+<<output TARGETS=>>=
+set --
+<<targets>>
+printf -- 'TARGETS = \\\n'
+<<indent "$@">>
+@
+
+<<output all:>>=
+printf -- '\nall: $(TARGETS)\n\n'
+for target; do
+    printf '%s: \\\n' "${target}"
+    (
+        eval "set --; ${set_sources}"
+        set_deps=`nofake --error -R"${target} deps" "$@" | cmd_push_to_argv`
+        eval "set --; ${set_deps}"
+        <<indent "$@">>
+        printf -- '\tnofake --error -R'"'"'build '"${target}'"' $^ | $(SH)\n\n'
+    )
+done
+@
+
+<<generate Makefile>>=
+#!/bin/sh
+set -eu
+SH=${SH:-sh -eu}; export SH
+<<function cmd_push_to_argv>>
+<<function list_set_sources>>
+<<function indent_args>>
+printf -- '\n# automatically generated from <<Makefile prefix>>.nw\n\n'
+set_sources=`list_set_sources`
+printf -- 'SH = %s\n\n' "${SH}"
+<<output TARGETS=>>
+<<output all:>>
+printf -- 'clean:\n\t-rm -f $(TARGETS)\n'
+@
+
+<<generate build.sh>>=
+#!/bin/sh
+set -eu
+CHMOD='chmod 0555' nofake.sh --error -Rbuild.sh -obuild.sh <<Makefile prefix>>.nw
+@
+
+<<build.sh>>=
+#!/bin/sh
+# automatically generated from <<Makefile prefix>>.nw
+set -eu
+SH=${SH:-sh -eu}; export SH
+nofake --error <<Makefile prefix>>.nw | ${SH}
+make -f <<Makefile prefix>>
+@
+
+<<targets>>=
+set -- "$@" rttdef.h
+set -- "$@" builtin.nw
+set -- "$@" data.nw
+set -- "$@" eval.nw
+set -- "$@" main.nw
+set -- "$@" print.nw
+set -- "$@" read.nw
+@
+
+<<rttdef.h deps>>=
+<<Makefile prefix>>.nw
+<<build rttdef.h - gcc>>=
+: | gcc -dM -E - > rttdef.h
+<<build rttdef.h - clang>>=
+: | clang -dM -E - > rttdef.h
+<<build rttdef.h>>=
+<<build rttdef.h - gcc>>
+@
+
+<<common deps>>=
+<<Makefile prefix>>.nw rttdef.h
+@
+
+<<builtin.nw deps>>=
+<<common deps>> builtin.r
+<<data.nw deps>>=
+<<common deps>> data.r
+<<eval.nw deps>>=
+<<common deps>> eval.r
+<<main.nw deps>>=
+<<common deps>> main.r lisp.h
+<<print.nw deps>>=
+<<common deps>> print.r
+<<read.nw deps>>=
+<<common deps>> read.r
+@
+
+<<r -> nw>>=
+rtt -x "${R}.r"
+@
+
+rtt must also be built with yacc's '%debug' option
+for YYDEBUG to work
+
+<<r -> nw DEBUG>>=
+YYDEBUG=1 rtt -x "${R}.r"
+@
+
+<<build builtin.nw>>=
+R=builtin; <<r -> nw>>
+<<build data.nw>>=
+R=data; <<r -> nw>>
+<<build eval.nw>>=
+R=eval; <<r -> nw>>
+<<build main.nw>>=
+R=main; <<r -> nw>>
+<<build print.nw>>=
+R=print; <<r -> nw>>
+<<build read.nw>>=
+R=read; <<r -> nw>>
+@
+

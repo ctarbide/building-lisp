@@ -1,5 +1,7 @@
 #include "lisp.h"
 
+#output "builtin.nw"
+
 int builtin_car(Atom args, Atom *result)
 {
 	if (nilp(args) || !nilp(cdr(args)))
@@ -70,10 +72,11 @@ int builtin_eq(Atom args, Atom *result)
 		case AtomType_Builtin:
 			eq = (a.value.builtin == b.value.builtin);
 			break;
+		default:
+			return Error_Exhaustion;
 		}
-	} else {
+	} else
 		eq = 0;
-	}
 
 	*result = eq ? make_sym("T") : nil;
 	return Error_OK;
@@ -205,4 +208,3 @@ int builtin_less(Atom args, Atom *result)
 
 	return Error_OK;
 }
-
